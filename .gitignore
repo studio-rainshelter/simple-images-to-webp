@@ -44,5 +44,10 @@ Thumbs.db
 output/
 *.webp
 
+# PyInstaller Build
+build/
+dist/
+*.spec.bak
+
 # Test images (optional - remove if you want to track)
 # images/
