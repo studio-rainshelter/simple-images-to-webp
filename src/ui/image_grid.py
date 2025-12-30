@@ -69,33 +69,47 @@ class ImageGrid(QScrollArea):
         self._layout.addWidget(self._placeholder, 0, 0)
         
     def load_images(self, images: List[ImageFile]):
-        """이미지 목록 로드"""
+        """이미지 목록 로드 (기존 목록 대체)"""
         # 기존 아이템 정리
         self.clear()
         
-        self._image_files = images
+        self.add_images(images)
         
+    def add_images(self, images: List[ImageFile]):
+        """이미지 목록 추가 (기존 목록 유지)"""
         if not images:
-            self._placeholder.show()
+            if not self._image_files:
+                self._placeholder.show()
             return
             
         self._placeholder.hide()
         
-        # 썸네일 로더 시작
+        # 목록에 추가
+        self._image_files.extend(images)
+        
+        # 썸네일 로더 시작 (이미 실행 중이면 무방)
         self._loader_pool.start()
         
         # 아이템 생성 및 썸네일 로드 요청
         for i, img in enumerate(images):
+            # 중복 체크 (선택 사항이나, 경로가 키이므로 덮어씌워짐. 여기선 그냥 진행)
+            if img.path in self._items:
+                continue
+                
             item = ThumbnailItem(img.path, img.filename)
             item.selection_changed.connect(self._on_item_selection_changed)
             self._items[img.path] = item
-            self._selected_paths.add(img.path)
+            
+            # 기본적으로 선택된 상태이므로 경로 추가
+            if item.is_selected:
+                self._selected_paths.add(img.path)
             
             # 썸네일 로드 요청
             self._loader_pool.add_task(img.path)
             
         # 그리드 재배치
         self._relayout_grid()
+
         
     def clear(self):
         """모든 아이템 제거"""

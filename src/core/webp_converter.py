@@ -27,21 +27,22 @@ class ConvertResult:
     converted_size: int = 0
     
 
-def _get_unique_filename(folder: str, original_filename: str) -> str:
+def _get_reserved_unique_filename(folder: str, original_filename: str, reserved: set) -> str:
     """
-    중복 파일명 처리 (REQ-F-02)
-    image.webp 존재 시 → image(1).webp → image(2).webp ...
+    중복 파일명 처리 (예약된 파일명 포함)
+    파일 시스템 확인 AND 예약된 목록 확인
     """
     base = Path(original_filename).stem
-    dst_path = os.path.join(folder, f"{base}.webp")
     
-    if not os.path.exists(dst_path):
+    # 기본 경로
+    dst_path = os.path.join(folder, f"{base}.webp")
+    if not os.path.exists(dst_path) and os.path.normpath(dst_path).lower() not in reserved:
         return dst_path
         
     counter = 1
     while True:
         dst_path = os.path.join(folder, f"{base}({counter}).webp")
-        if not os.path.exists(dst_path):
+        if not os.path.exists(dst_path) and os.path.normpath(dst_path).lower() not in reserved:
             return dst_path
         counter += 1
 
@@ -49,9 +50,9 @@ def _get_unique_filename(folder: str, original_filename: str) -> str:
 def convert_single(args: tuple) -> ConvertResult:
     """
     단일 이미지 WebP 변환 (worker 함수)
-    args: (src_path, dst_folder, options)
+    args: (src_path, dst_path, options)
     """
-    src_path, dst_folder, options = args
+    src_path, dst_path, options = args
     
     # 옵션 기본값 처리
     quality = options.get('quality', 80)
@@ -87,8 +88,8 @@ def convert_single(args: tuple) -> ConvertResult:
                 else:
                     img = img.resize((resize_width, resize_height), Image.Resampling.LANCZOS)
             
-            # 출력 경로 결정 (중복 처리)
-            dst_path = _get_unique_filename(dst_folder, os.path.basename(src_path))
+            # 출력 경로 결정 (메인 프로세스에서 전달받음)
+            # dst_path는 이미 유니크하게 결정됨
             
             # WebP로 저장
             save_kwargs = {
@@ -180,13 +181,21 @@ class ConversionManager:
         
         # 작업 목록 생성
         tasks = []
+        reserved_filenames: set = set()
+        
         for src_path in file_paths:
             # 출력 폴더 결정
             if output_folder:
                 dst_folder = output_folder
             else:
                 dst_folder = os.path.dirname(src_path)
-            tasks.append((src_path, dst_folder, options))
+                
+            # 파일명 중복 방지 (Race Condition 해결을 위해 메인에서 미리 결정)
+            base_name = os.path.basename(src_path)
+            dst_path = _get_reserved_unique_filename(dst_folder, base_name, reserved_filenames)
+            reserved_filenames.add(os.path.normpath(dst_path).lower())
+            
+            tasks.append((src_path, dst_path, options))
             
         # ProcessPoolExecutor로 병렬 처리
         with ProcessPoolExecutor(max_workers=max_workers) as executor:

@@ -56,7 +56,7 @@ def scan_folder(folder_path: str, include_subdirs: bool = False) -> List[ImageFi
             for root, _, files in os.walk(folder_path):
                 for filename in files:
                     if is_valid_image(filename):
-                        file_path = os.path.join(root, filename)
+                        file_path = os.path.normpath(os.path.join(root, filename))
                         try:
                             size = os.path.getsize(file_path)
                             images.append(ImageFile(
@@ -70,7 +70,7 @@ def scan_folder(folder_path: str, include_subdirs: bool = False) -> List[ImageFi
         else:
             # 1 depth만 스캔 (REQ-L-01 기본값)
             for filename in os.listdir(folder_path):
-                file_path = os.path.join(folder_path, filename)
+                file_path = os.path.normpath(os.path.join(folder_path, filename))
                 if os.path.isfile(file_path) and is_valid_image(filename):
                     try:
                         size = os.path.getsize(file_path)
@@ -97,7 +97,8 @@ def scan_files(file_paths: List[str]) -> List[ImageFile]:
     """
     images: List[ImageFile] = []
     
-    for file_path in file_paths:
+    for file_path_raw in file_paths:
+        file_path = os.path.normpath(file_path_raw)
         if os.path.isfile(file_path) and is_valid_image(file_path):
             try:
                 size = os.path.getsize(file_path)

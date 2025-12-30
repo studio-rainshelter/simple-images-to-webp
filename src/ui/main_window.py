@@ -86,6 +86,11 @@ class MainWindow(QMainWindow):
         self.btn_open_folder.setMinimumWidth(100)
         toolbar.addWidget(self.btn_open_folder)
         
+        # 파일 추가 버튼
+        self.btn_add_files = QPushButton("📄 파일 추가")
+        self.btn_add_files.setMinimumWidth(100)
+        toolbar.addWidget(self.btn_add_files)
+        
         toolbar.addSeparator()
         
         # 전체 선택/해제 버튼
@@ -180,6 +185,7 @@ class MainWindow(QMainWindow):
     def _connect_signals(self):
         """시그널 연결"""
         self.btn_open_folder.clicked.connect(self._on_open_folder)
+        self.btn_add_files.clicked.connect(self._on_add_files)
         self.btn_select_all.clicked.connect(self._on_select_all)
         self.btn_deselect_all.clicked.connect(self._on_deselect_all)
         self.btn_output_folder.clicked.connect(self._on_set_output_folder)
@@ -231,6 +237,17 @@ class MainWindow(QMainWindow):
         if folder:
             self._load_folder(folder)
             
+    def _on_add_files(self):
+        """파일 추가 버튼 클릭"""
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "이미지 파일 선택",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif)"
+        )
+        if files:
+            self._add_files(files)
+            
     def _load_folder(self, folder_path: str):
         """폴더에서 이미지 로드"""
         self.status_label.setText(f"스캔 중: {folder_path}")
@@ -257,7 +274,27 @@ class MainWindow(QMainWindow):
             self.btn_convert.setEnabled(False)
             
         self._update_status()
+        self._update_status()
         self.folder_loaded.emit(images)
+        
+    def _add_files(self, file_paths: List[str]):
+        """개별 파일 목록 추가"""
+        new_images = scan_files(file_paths)
+        if not new_images:
+            return
+            
+        # 기존 목록에 추가
+        self.image_files.extend(new_images)
+        
+        # ImageGrid에 추가 (Append)
+        self.image_grid.add_images(new_images)
+        
+        self.hint_label.setText(f"📷 총 {len(self.image_files)}개 이미지 로드됨")
+        self.btn_select_all.setEnabled(True)
+        self.btn_deselect_all.setEnabled(True)
+        self.btn_convert.setEnabled(True)
+        
+        self._update_status()
         
     def _on_grid_selection_changed(self, selected_paths: set):
         """그리드 선택 상태 변경"""
@@ -362,6 +399,7 @@ class MainWindow(QMainWindow):
     def set_ui_enabled(self, enabled: bool):
         """UI 활성화/비활성화 (REQ-P-02: 변환 중 UI 잠금)"""
         self.btn_open_folder.setEnabled(enabled)
+        self.btn_add_files.setEnabled(enabled)
         self.btn_select_all.setEnabled(enabled and self.image_grid.total_count > 0)
         self.btn_deselect_all.setEnabled(enabled and self.image_grid.total_count > 0)
         self.btn_output_folder.setEnabled(enabled)
