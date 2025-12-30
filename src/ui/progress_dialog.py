@@ -29,13 +29,13 @@ class ConversionWorker(QThread):
         self,
         file_paths: List[str],
         output_folder: Optional[str],
-        quality: int,
+        options: dict,
         parent=None
     ):
         super().__init__(parent)
         self._file_paths = file_paths
         self._output_folder = output_folder
-        self._quality = quality
+        self._options = options
         self._manager = ConversionManager()
         
     def run(self):
@@ -44,7 +44,7 @@ class ConversionWorker(QThread):
             results = self._manager.convert_batch(
                 self._file_paths,
                 self._output_folder,
-                self._quality,
+                self._options,
                 progress_callback=self._on_progress
             )
             self.finished.emit(results)
@@ -81,13 +81,13 @@ class ProgressDialog(QDialog):
         self,
         file_paths: List[str],
         output_folder: Optional[str],
-        quality: int,
+        options: dict,
         parent=None
     ):
         super().__init__(parent)
         self._file_paths = file_paths
         self._output_folder = output_folder
-        self._quality = quality
+        self._options = options
         self._worker: Optional[ConversionWorker] = None
         self._results: List[ConvertResult] = []
         
@@ -150,7 +150,7 @@ class ProgressDialog(QDialog):
         self._worker = ConversionWorker(
             self._file_paths,
             self._output_folder,
-            self._quality,
+            self._options,
             self
         )
         self._worker.progress.connect(self._on_progress)

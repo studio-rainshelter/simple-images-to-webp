@@ -49,9 +49,20 @@ def _get_unique_filename(folder: str, original_filename: str) -> str:
 def convert_single(args: tuple) -> ConvertResult:
     """
     단일 이미지 WebP 변환 (worker 함수)
-    args: (src_path, dst_folder, quality)
+    args: (src_path, dst_folder, options)
     """
-    src_path, dst_folder, quality = args
+    src_path, dst_folder, options = args
+    
+    # 옵션 기본값 처리
+    quality = options.get('quality', 80)
+    lossless = options.get('lossless', False)
+    method = options.get('method', 4)
+    exact = options.get('exact', False)
+    
+    resize_enable = options.get('resize_enable', False)
+    resize_width = options.get('resize_width', 0)
+    resize_height = options.get('resize_height', 0)
+    keep_ratio = options.get('keep_ratio', True)
     
     try:
         # 원본 파일 크기
@@ -69,11 +80,24 @@ def convert_single(args: tuple) -> ConvertResult:
             elif img.mode not in ('RGB', 'RGBA'):
                 img = img.convert('RGB')
                 
+            # 리사이징 처리
+            if resize_enable and resize_width > 0 and resize_height > 0:
+                if keep_ratio:
+                    img.thumbnail((resize_width, resize_height), Image.Resampling.LANCZOS)
+                else:
+                    img = img.resize((resize_width, resize_height), Image.Resampling.LANCZOS)
+            
             # 출력 경로 결정 (중복 처리)
             dst_path = _get_unique_filename(dst_folder, os.path.basename(src_path))
             
             # WebP로 저장
-            img.save(dst_path, 'WEBP', quality=quality, method=4)
+            save_kwargs = {
+                'quality': quality,
+                'method': method,
+                'lossless': lossless,
+                'exact': exact
+            }
+            img.save(dst_path, 'WEBP', **save_kwargs)
             
             converted_size = os.path.getsize(dst_path)
             
@@ -125,7 +149,7 @@ class ConversionManager:
         self,
         file_paths: List[str],
         output_folder: Optional[str],
-        quality: int = 80,
+        options: dict,
         progress_callback: Optional[Callable[[int, int, ConvertResult], None]] = None,
         max_workers: Optional[int] = None
     ) -> List[ConvertResult]:
@@ -135,7 +159,7 @@ class ConversionManager:
         Args:
             file_paths: 변환할 파일 경로 목록
             output_folder: 출력 폴더 (None이면 원본 위치)
-            quality: WebP 품질 (1-100)
+            options: 변환 옵션 (quality, resizing 등)
             progress_callback: 진행률 콜백 (current, total, result)
             max_workers: 최대 워커 수 (None이면 CPU 코어 수)
         
@@ -162,7 +186,7 @@ class ConversionManager:
                 dst_folder = output_folder
             else:
                 dst_folder = os.path.dirname(src_path)
-            tasks.append((src_path, dst_folder, quality))
+            tasks.append((src_path, dst_folder, options))
             
         # ProcessPoolExecutor로 병렬 처리
         with ProcessPoolExecutor(max_workers=max_workers) as executor:

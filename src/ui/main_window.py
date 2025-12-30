@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 from src.core.file_scanner import scan_folder, scan_files, ImageFile
 from src.ui.image_grid import ImageGrid
 from src.ui.progress_dialog import ProgressDialog
+from src.ui.settings_dialog import SettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -30,7 +31,18 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.image_files: List[ImageFile] = []
         self.output_folder: Optional[str] = None
-        self.quality: int = 80
+        
+        # 기본 변환 옵션
+        self.conversion_options = {
+            'quality': 80,
+            'lossless': False,
+            'method': 4,
+            'exact': False,
+            'resize_enable': False,
+            'resize_width': 1920,
+            'resize_height': 1080,
+            'keep_ratio': True
+        }
         
         self._init_ui()
         self._connect_signals()
@@ -54,8 +66,8 @@ class MainWindow(QMainWindow):
         # 툴바 생성
         self._create_toolbar()
         
-        # 설정 패널 (품질 슬라이더 등)
-        self._create_settings_panel(main_layout)
+        # 설정 안내 레이블 (기존 설정 패널 제거 후 간단한 안내만 표시)
+        self._create_info_panel(main_layout)
         
         # 이미지 그리드 영역
         self._create_image_area(main_layout)
@@ -101,6 +113,13 @@ class MainWindow(QMainWindow):
                             spacer.sizePolicy().verticalPolicy().Preferred)
         toolbar.addWidget(spacer)
         
+        # 설정 버튼
+        self.btn_settings = QPushButton("⚙️ 옵션")
+        self.btn_settings.clicked.connect(self._on_settings)
+        toolbar.addWidget(self.btn_settings)
+        
+        toolbar.addSeparator()
+        
         # 변환 시작 버튼
         self.btn_convert = QPushButton("🚀 WebP 변환")
         self.btn_convert.setMinimumWidth(120)
@@ -123,42 +142,21 @@ class MainWindow(QMainWindow):
         """)
         toolbar.addWidget(self.btn_convert)
         
-    def _create_settings_panel(self, parent_layout: QVBoxLayout):
-        """설정 패널 생성 (품질 설정)"""
-        settings_frame = QFrame()
-        settings_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        settings_frame.setMaximumHeight(50)
+    def _create_info_panel(self, parent_layout: QVBoxLayout):
+        """안내 패널 생성"""
+        info_frame = QFrame()
+        info_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        info_frame.setMaximumHeight(40)
         
-        settings_layout = QHBoxLayout(settings_frame)
-        settings_layout.setContentsMargins(10, 5, 10, 5)
-        
-        # 품질 레이블
-        settings_layout.addWidget(QLabel("품질:"))
-        
-        # 품질 슬라이더 (1-100)
-        self.quality_slider = QSlider(Qt.Orientation.Horizontal)
-        self.quality_slider.setMinimum(1)
-        self.quality_slider.setMaximum(100)
-        self.quality_slider.setValue(80)
-        self.quality_slider.setMaximumWidth(200)
-        settings_layout.addWidget(self.quality_slider)
-        
-        # 품질 숫자 입력
-        self.quality_spinbox = QSpinBox()
-        self.quality_spinbox.setMinimum(1)
-        self.quality_spinbox.setMaximum(100)
-        self.quality_spinbox.setValue(80)
-        self.quality_spinbox.setMinimumWidth(60)
-        settings_layout.addWidget(self.quality_spinbox)
-        
-        settings_layout.addStretch()
+        info_layout = QHBoxLayout(info_frame)
+        info_layout.setContentsMargins(10, 5, 10, 5)
         
         # 안내 레이블
         self.hint_label = QLabel("💡 폴더를 선택하거나 이미지를 여기에 드래그하세요")
         self.hint_label.setStyleSheet("color: #666666;")
-        settings_layout.addWidget(self.hint_label)
+        info_layout.addWidget(self.hint_label)
         
-        parent_layout.addWidget(settings_frame)
+        parent_layout.addWidget(info_frame)
         
     def _create_image_area(self, parent_layout: QVBoxLayout):
         """이미지 표시 영역 생성"""
@@ -187,10 +185,7 @@ class MainWindow(QMainWindow):
         self.btn_output_folder.clicked.connect(self._on_set_output_folder)
         self.btn_convert.clicked.connect(self._on_convert)
         
-        # 품질 슬라이더와 스핀박스 동기화
-        self.quality_slider.valueChanged.connect(self.quality_spinbox.setValue)
-        self.quality_spinbox.valueChanged.connect(self.quality_slider.setValue)
-        self.quality_spinbox.valueChanged.connect(self._on_quality_changed)
+
         
     # === 드래그 앤 드롭 이벤트 ===
     
@@ -293,10 +288,13 @@ class MainWindow(QMainWindow):
             self.lbl_output_folder.setText(display_path)
             self.lbl_output_folder.setToolTip(folder)
         
-    def _on_quality_changed(self, value: int):
-        """품질 값 변경"""
-        self.quality = value
-        
+    def _on_settings(self):
+        """설정 대화상자 열기"""
+        dialog = SettingsDialog(self.conversion_options, self)
+        if dialog.exec():
+            # 설정 업데이트
+            self.conversion_options = dialog.get_options()
+            
     def _on_convert(self):
         """변환 시작"""
         selected_paths = self.image_grid.selected_paths
@@ -305,10 +303,15 @@ class MainWindow(QMainWindow):
             return
             
         # 확인 대화상자
+        quality = self.conversion_options.get('quality', 80)
+        msg = f"{len(selected_paths)}개 이미지를 품질 {quality}으로 WebP 변환하시겠습니까?"
+        if self.conversion_options.get('resize_enable'):
+            msg += "\n(리사이징 적용됨)"
+            
         reply = QMessageBox.question(
             self,
             "변환 확인",
-            f"{len(selected_paths)}개 이미지를 품질 {self.quality}으로 WebP 변환하시겠습니까?",
+            msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
@@ -322,7 +325,7 @@ class MainWindow(QMainWindow):
         dialog = ProgressDialog(
             list(selected_paths),
             self.output_folder,
-            self.quality,
+            self.conversion_options,
             self
         )
         dialog.start()
