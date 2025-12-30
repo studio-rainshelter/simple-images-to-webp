@@ -131,6 +131,12 @@ class MainWindow(QMainWindow):
         self.btn_img_deselect_all.setEnabled(False)
         toolbar.addWidget(self.btn_img_deselect_all)
         
+        # 선택 삭제 버튼
+        self.btn_img_remove = QPushButton("🗑️ 삭제")
+        self.btn_img_remove.setEnabled(False)
+        self.btn_img_remove.setStyleSheet("color: #ff6b6b;")
+        toolbar.addWidget(self.btn_img_remove)
+        
         toolbar.addSeparator()
         
         # 출력 폴더 설정
@@ -226,6 +232,12 @@ class MainWindow(QMainWindow):
         self.btn_vid_deselect_all = QPushButton("✗ 전체 해제")
         self.btn_vid_deselect_all.setEnabled(False)
         toolbar.addWidget(self.btn_vid_deselect_all)
+        
+        # 선택 삭제 버튼
+        self.btn_vid_remove = QPushButton("🗑️ 삭제")
+        self.btn_vid_remove.setEnabled(False)
+        self.btn_vid_remove.setStyleSheet("color: #ff6b6b;")
+        toolbar.addWidget(self.btn_vid_remove)
         
         toolbar.addSeparator()
         
@@ -341,6 +353,7 @@ class MainWindow(QMainWindow):
         self.btn_img_add_files.clicked.connect(self._on_img_add_files)
         self.btn_img_select_all.clicked.connect(self._on_img_select_all)
         self.btn_img_deselect_all.clicked.connect(self._on_img_deselect_all)
+        self.btn_img_remove.clicked.connect(self._on_img_remove)
         self.btn_img_output_folder.clicked.connect(self._on_set_output_folder)
         self.btn_img_settings.clicked.connect(self._on_img_settings)
         self.btn_img_convert.clicked.connect(self._on_img_convert)
@@ -351,6 +364,7 @@ class MainWindow(QMainWindow):
         self.btn_vid_add_files.clicked.connect(self._on_vid_add_files)
         self.btn_vid_select_all.clicked.connect(self._on_vid_select_all)
         self.btn_vid_deselect_all.clicked.connect(self._on_vid_deselect_all)
+        self.btn_vid_remove.clicked.connect(self._on_vid_remove)
         self.btn_vid_output_folder.clicked.connect(self._on_set_output_folder)
         self.btn_vid_settings.clicked.connect(self._on_vid_settings)
         self.btn_vid_convert.clicked.connect(self._on_vid_convert)
@@ -427,11 +441,13 @@ class MainWindow(QMainWindow):
             self.img_hint_label.setText(f"📷 {len(images)}개 이미지 로드됨")
             self.btn_img_select_all.setEnabled(True)
             self.btn_img_deselect_all.setEnabled(True)
+            self.btn_img_remove.setEnabled(False) # 처음엔 선택된게 없으므로
             self.btn_img_convert.setEnabled(True)
         else:
             self.img_hint_label.setText("💡 지원되는 이미지가 없습니다")
             self.btn_img_select_all.setEnabled(False)
             self.btn_img_deselect_all.setEnabled(False)
+            self.btn_img_remove.setEnabled(False)
             self.btn_img_convert.setEnabled(False)
             
         self._update_status()
@@ -457,6 +473,26 @@ class MainWindow(QMainWindow):
         
     def _on_img_deselect_all(self):
         self.image_grid.deselect_all()
+        self._update_status()
+        
+    def _on_img_remove(self):
+        """선택된 이미지 삭제"""
+        removed = self.image_grid.remove_selected_items()
+        
+        # self.image_files 리스트에서도 제거 (image_grid에서 반환된 리스트는 이미 제거된 파일들)
+        # Main Window의 self.image_files는 _load_images에서 갱신되지만,
+        # 부분 삭제의 경우 동기화를 맞춰줘야 함.
+        # ImageGrid.remove_selected_items()가 내부 리스트를 관리하고 반환하는 방식을 사용했으므로,
+        # 여기서는 반환된 객체를 이용해 참조를 제거하거나 Grid의 상태를 신뢰해야 함.
+        
+        # ImageGrid가 자체적으로 리스트를 관리하고 있으므로, 
+        # MainWindow의 self.image_files도 갱신 필요.
+        # 가장 간단한 방법: Grid의 리스트로 덮어쓰거나, 반환된 항목 제거.
+        
+        for f in removed:
+            if f in self.image_files:
+                self.image_files.remove(f)
+                
         self._update_status()
         
     def _on_img_settings(self):
@@ -535,11 +571,13 @@ class MainWindow(QMainWindow):
             self.vid_hint_label.setText(f"🎬 {len(videos)}개 동영상 로드됨")
             self.btn_vid_select_all.setEnabled(True)
             self.btn_vid_deselect_all.setEnabled(True)
+            self.btn_vid_remove.setEnabled(False)
             self.btn_vid_convert.setEnabled(True)
         else:
             self.vid_hint_label.setText("💡 지원되는 동영상이 없습니다")
             self.btn_vid_select_all.setEnabled(False)
             self.btn_vid_deselect_all.setEnabled(False)
+            self.btn_vid_remove.setEnabled(False)
             self.btn_vid_convert.setEnabled(False)
             
         self._update_status()
@@ -564,6 +602,16 @@ class MainWindow(QMainWindow):
         
     def _on_vid_deselect_all(self):
         self.video_grid.deselect_all()
+        self._update_status()
+        
+    def _on_vid_remove(self):
+        """선택된 동영상 삭제"""
+        removed = self.video_grid.remove_selected_items()
+        
+        for f in removed:
+            if f in self.video_files:
+                self.video_files.remove(f)
+                
         self._update_status()
         
     def _on_vid_settings(self):
@@ -637,10 +685,12 @@ class MainWindow(QMainWindow):
             total = self.image_grid.total_count
             selected = self.image_grid.selected_count
             self.btn_img_convert.setEnabled(selected > 0)
+            self.btn_img_remove.setEnabled(selected > 0)
         else:
             total = self.video_grid.total_count
             selected = self.video_grid.selected_count
             self.btn_vid_convert.setEnabled(selected > 0)
+            self.btn_vid_remove.setEnabled(selected > 0)
             
         if total > 0:
             self.status_label.setText(t('total_files', count=total))
@@ -656,6 +706,7 @@ class MainWindow(QMainWindow):
         self.btn_img_add_files.setEnabled(enabled)
         self.btn_img_select_all.setEnabled(enabled and self.image_grid.total_count > 0)
         self.btn_img_deselect_all.setEnabled(enabled and self.image_grid.total_count > 0)
+        self.btn_img_remove.setEnabled(enabled and self.image_grid.selected_count > 0)
         self.btn_img_output_folder.setEnabled(enabled)
         self.btn_img_convert.setEnabled(enabled and self.image_grid.selected_count > 0)
         
@@ -664,6 +715,7 @@ class MainWindow(QMainWindow):
         self.btn_vid_add_files.setEnabled(enabled)
         self.btn_vid_select_all.setEnabled(enabled and self.video_grid.total_count > 0)
         self.btn_vid_deselect_all.setEnabled(enabled and self.video_grid.total_count > 0)
+        self.btn_vid_remove.setEnabled(enabled and self.video_grid.selected_count > 0)
         self.btn_vid_output_folder.setEnabled(enabled)
         self.btn_vid_convert.setEnabled(enabled and self.video_grid.selected_count > 0)
         
@@ -690,6 +742,7 @@ class MainWindow(QMainWindow):
         self.btn_img_add_files.setText(t('btn_add_files'))
         self.btn_img_select_all.setText(t('btn_select_all'))
         self.btn_img_deselect_all.setText(t('btn_deselect_all'))
+        self.btn_img_remove.setText(t('btn_remove'))
         self.btn_img_output_folder.setText(t('btn_output_folder'))
         self.btn_img_settings.setText(t('btn_settings'))
         self.btn_img_convert.setText(t('btn_convert'))
@@ -699,6 +752,7 @@ class MainWindow(QMainWindow):
         self.btn_vid_add_files.setText(t('btn_add_files'))
         self.btn_vid_select_all.setText(t('btn_select_all'))
         self.btn_vid_deselect_all.setText(t('btn_deselect_all'))
+        self.btn_vid_remove.setText(t('btn_remove'))
         self.btn_vid_output_folder.setText(t('btn_output_folder'))
         self.btn_vid_settings.setText(t('btn_settings'))
         self.btn_vid_convert.setText(t('btn_convert'))

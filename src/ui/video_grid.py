@@ -195,6 +195,39 @@ class VideoGrid(QScrollArea):
         """전체 파일 수"""
         return len(self._items)
         
+    def remove_selected_items(self) -> List[VideoFile]:
+        """선택된 아이템 제거 및 제거된 파일 목록 반환"""
+        if not self._selected_paths:
+            return []
+            
+        removed_files = []
+        paths_to_remove = self._selected_paths.copy()
+        
+        # 파일 목록에서 제거
+        for i in range(len(self._video_files) - 1, -1, -1):
+            file = self._video_files[i]
+            if file.path in paths_to_remove:
+                removed_files.append(file)
+                self._video_files.pop(i)
+                
+        # 아이템 위젯 제거
+        for path in paths_to_remove:
+            if path in self._items:
+                item = self._items[path]
+                self._layout.removeWidget(item)
+                item.deleteLater()
+                del self._items[path]
+                
+        self._selected_paths.clear()
+        self._relayout_grid()
+        
+        if not self._items:
+            self._placeholder.show()
+            
+        self.selection_changed.emit(set())
+        
+        return removed_files
+
     def stop_loader(self):
         """로더 중지 (앱 종료 시)"""
         self._loader_pool.stop()

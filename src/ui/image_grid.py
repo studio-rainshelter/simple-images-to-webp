@@ -209,6 +209,48 @@ class ImageGrid(QScrollArea):
         """전체 파일 수"""
         return len(self._items)
         
+    def remove_selected_items(self) -> List[ImageFile]:
+        """선택된 아이템 제거 및 제거된 파일 목록 반환"""
+        if not self._selected_paths:
+            return []
+            
+        removed_files = []
+        
+        # 제거할 경로 복사 (순회 중 수정 방지)
+        paths_to_remove = self._selected_paths.copy()
+        
+        # 파일 목록에서 제거 (역순으로 순회하여 인덱스 문제 방지)
+        for i in range(len(self._image_files) - 1, -1, -1):
+            file = self._image_files[i]
+            if file.path in paths_to_remove:
+                removed_files.append(file)
+                self._image_files.pop(i)
+                
+        # 아이템 위젯 제거
+        for path in paths_to_remove:
+            if path in self._items:
+                item = self._items[path]
+                self._layout.removeWidget(item)
+                item.deleteLater()
+                del self._items[path]
+                
+        self._selected_paths.clear()
+        
+        # 썸네일 로더 큐에서도 제거 필요하지만, 
+        # 복잡하므로 무시 (로딩 되어도 아이템 없으면 무시됨)
+        
+        # 그리드 재배치
+        self._relayout_grid()
+        
+        # 플레이스홀더 표시 여부 체크
+        if not self._items:
+            self._placeholder.show()
+            
+        # 변경 알림
+        self.selection_changed.emit(set())
+        
+        return removed_files
+
     def stop_loader(self):
         """로더 중지 (앱 종료 시)"""
         self._loader_pool.stop()
