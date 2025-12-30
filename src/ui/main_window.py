@@ -50,15 +50,15 @@ class MainWindow(QMainWindow):
             'keep_ratio': True
         }
         
-        # 동영상 변환 옵션
+        # 동영상 변환 옵션 (용량 감소 최적화)
         self.video_options = {
-            'fps': 15,
-            'quality': 75,
+            'fps': 10,  # 낮은 FPS로 용량 절감
+            'quality': 50,  # 적당한 압축
             'loop': 0,
             'resize_enable': False,  # 기본: 원본 크기 유지
             'max_width': 480,
             'max_height': 480,
-            'duration_enable': False,  # 기본: 전체 길이 유지
+            'duration_enable': False,  # 길이는 사용자 선택
             'max_duration': 10
         }
         
