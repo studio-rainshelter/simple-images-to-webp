@@ -42,7 +42,6 @@ Thumbs.db
 
 # Output
 output/
-*.webp
 
 # PyInstaller Build
 build/
