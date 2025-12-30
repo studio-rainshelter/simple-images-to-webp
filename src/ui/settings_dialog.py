@@ -1,6 +1,7 @@
 """
 설정 다이얼로그
 WebP 변환 옵션 및 리사이징 설정
+다국어 지원
 """
 
 from PyQt6.QtCore import Qt
@@ -9,6 +10,9 @@ from PyQt6.QtWidgets import (
     QLabel, QSlider, QSpinBox, QCheckBox, 
     QComboBox, QPushButton, QFormLayout
 )
+
+from src.core.i18n import t
+
 
 class SettingsDialog(QDialog):
     """
@@ -24,13 +28,13 @@ class SettingsDialog(QDialog):
         
     def _init_ui(self):
         """UI 초기화"""
-        self.setWindowTitle("WebP 변환 설정")
+        self.setWindowTitle(t('settings_title'))
         self.setMinimumWidth(400)
         
         layout = QVBoxLayout(self)
         
         # === WebP 옵션 그룹 ===
-        webp_group = QGroupBox("WebP 옵션")
+        webp_group = QGroupBox(t('group_webp_options'))
         webp_layout = QFormLayout()
         
         # 1. 품질 (Quality)
@@ -46,37 +50,36 @@ class SettingsDialog(QDialog):
         
         quality_layout.addWidget(self.quality_slider)
         quality_layout.addWidget(self.quality_spinbox)
-        webp_layout.addRow("품질 (Quality):", quality_layout)
+        webp_layout.addRow(t('label_quality'), quality_layout)
         
         # 2. 무손실 (Lossless)
-        self.chk_lossless = QCheckBox("무손실 압축 사용")
+        self.chk_lossless = QCheckBox(t('chk_lossless'))
         self.chk_lossless.toggled.connect(self._on_lossless_toggled)
-        webp_layout.addRow("무손실 (Lossless):", self.chk_lossless)
+        webp_layout.addRow(t('label_lossless'), self.chk_lossless)
         
         # 3. 압축 효율 (Method)
         self.combo_method = QComboBox()
         for i in range(7):
             desc = ""
-            if i == 0: desc = " (빠름)"
-            elif i == 4: desc = " (기본)"
-            elif i == 6: desc = " (최대 압축)"
+            if i == 0: desc = t('method_fast')
+            elif i == 4: desc = t('method_default')
+            elif i == 6: desc = t('method_best')
             self.combo_method.addItem(f"{i}{desc}", i)
-        webp_layout.addRow("압축 효율 (Method):", self.combo_method)
+        webp_layout.addRow(t('label_method'), self.combo_method)
         
         # 4. 투명도 보존 (Exact)
-        self.chk_exact = QCheckBox("투명 영역 RGB 값 보존")
-        self.chk_exact.setToolTip("투명한 픽셀의 색상 정보까지 보존합니다. 용량이 커질 수 있습니다.")
-        webp_layout.addRow("투명도 보존 (Exact):", self.chk_exact)
+        self.chk_exact = QCheckBox(t('chk_exact'))
+        webp_layout.addRow(t('label_exact'), self.chk_exact)
         
         webp_group.setLayout(webp_layout)
         layout.addWidget(webp_group)
         
         # === 리사이징 옵션 그룹 ===
-        resize_group = QGroupBox("이미지 크기 조절 (Resizing)")
+        resize_group = QGroupBox(t('group_resize'))
         resize_layout = QFormLayout()
         
         # 활성화 체크박스
-        self.chk_resize_enable = QCheckBox("크기 조절 활성화")
+        self.chk_resize_enable = QCheckBox(t('chk_resize_enable'))
         self.chk_resize_enable.toggled.connect(self._on_resize_toggled)
         layout.addWidget(self.chk_resize_enable)
         
@@ -84,15 +87,15 @@ class SettingsDialog(QDialog):
         self.spin_width = QSpinBox()
         self.spin_width.setRange(1, 99999)
         self.spin_width.setSuffix(" px")
-        resize_layout.addRow("너비 (Width):", self.spin_width)
+        resize_layout.addRow(t('label_max_width'), self.spin_width)
         
         self.spin_height = QSpinBox()
         self.spin_height.setRange(1, 99999)
         self.spin_height.setSuffix(" px")
-        resize_layout.addRow("높이 (Height):", self.spin_height)
+        resize_layout.addRow(t('label_max_height'), self.spin_height)
         
         # 비율 유지
-        self.chk_keep_ratio = QCheckBox("가로/세로 비율 유지")
+        self.chk_keep_ratio = QCheckBox(t('chk_keep_ratio'))
         resize_layout.addRow("", self.chk_keep_ratio)
         
         resize_group.setLayout(resize_layout)
@@ -105,9 +108,9 @@ class SettingsDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        self.btn_ok = QPushButton("확인")
+        self.btn_ok = QPushButton(t('btn_ok'))
         self.btn_ok.clicked.connect(self.accept)
-        self.btn_cancel = QPushButton("취소")
+        self.btn_cancel = QPushButton(t('btn_cancel'))
         self.btn_cancel.clicked.connect(self.reject)
         
         btn_layout.addWidget(self.btn_ok)
@@ -138,10 +141,7 @@ class SettingsDialog(QDialog):
         self._on_resize_toggled(self.chk_resize_enable.isChecked())
         
     def _on_lossless_toggled(self, checked):
-        """무손실 체크 시 품질 슬라이더 비활성화 (보통 무손실은 품질 100 취급이나, PIL은 무시됨)"""
-        # PIL에서 lossless=True일 때 quality는 압축 노력(effort)으로 쓰일 수 있으므로
-        # 비활성화 보다는 툴팁 변경 등이 나을 수 있으나,
-        # 사용자 혼란 방지를 위해 일단 둡니다.
+        """무손실 체크 시"""
         pass
         
     def _on_resize_toggled(self, checked):

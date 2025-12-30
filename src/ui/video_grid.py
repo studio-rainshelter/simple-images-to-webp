@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.file_scanner import VideoFile
+from src.core.i18n import t
 from src.core.video_thumbnail_loader import VideoThumbnailLoaderPool
 from src.ui.video_thumbnail_item import VideoThumbnailItem, VIDEO_ITEM_WIDTH
 
@@ -61,7 +62,7 @@ class VideoGrid(QScrollArea):
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         
         # Placeholder
-        self._placeholder = QLabel("🎬 동영상이 없습니다\n\n폴더를 선택하거나 동영상을 드래그하세요")
+        self._placeholder = QLabel(t('hint_no_videos'))
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._placeholder.setStyleSheet("font-size: 18px; color: #888888;")
         self._layout.addWidget(self._placeholder, 0, 0)
@@ -197,3 +198,7 @@ class VideoGrid(QScrollArea):
     def stop_loader(self):
         """로더 중지 (앱 종료 시)"""
         self._loader_pool.stop()
+        
+    def retranslate(self):
+        """언어 변경 시 텍스트 업데이트"""
+        self._placeholder.setText(t('hint_no_videos'))

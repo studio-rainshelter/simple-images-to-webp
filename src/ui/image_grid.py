@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.file_scanner import ImageFile
+from src.core.i18n import t
 from src.core.thumbnail_loader import ThumbnailLoaderPool
 from src.ui.thumbnail_item import ThumbnailItem, ITEM_WIDTH
 
@@ -63,7 +64,7 @@ class ImageGrid(QScrollArea):
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         
         # Placeholder
-        self._placeholder = QLabel("📁 이미지가 없습니다\n\n폴더를 선택하거나 이미지를 드래그하세요")
+        self._placeholder = QLabel(t('hint_no_images'))
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._placeholder.setStyleSheet("font-size: 18px; color: #808080;")
         self._layout.addWidget(self._placeholder, 0, 0)
@@ -211,3 +212,7 @@ class ImageGrid(QScrollArea):
     def stop_loader(self):
         """로더 중지 (앱 종료 시)"""
         self._loader_pool.stop()
+        
+    def retranslate(self):
+        """언어 변경 시 텍스트 업데이트"""
+        self._placeholder.setText(t('hint_no_images'))

@@ -1,6 +1,7 @@
 """
 메인 윈도우 UI (탭 구조)
 이미지 변환 탭 + 동영상 변환 탭
+다국어 지원 (한국어/영어)
 """
 
 import os
@@ -11,13 +12,14 @@ from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QCloseEvent
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTabWidget, QToolBar, QPushButton, QLabel, QStatusBar,
-    QFileDialog, QMessageBox, QFrame
+    QFileDialog, QMessageBox, QFrame, QComboBox
 )
 
 from src.core.file_scanner import (
     scan_folder, scan_files, ImageFile,
     scan_folder_videos, scan_video_files, VideoFile, is_valid_video, is_valid_image
 )
+from src.core.i18n import t, set_language, get_language, get_available_languages
 from src.ui.image_grid import ImageGrid
 from src.ui.video_grid import VideoGrid
 from src.ui.progress_dialog import ProgressDialog
@@ -295,12 +297,39 @@ class MainWindow(QMainWindow):
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
         
-        self.status_label = QLabel("준비")
+        self.status_label = QLabel(t('ready'))
         self.statusbar.addWidget(self.status_label)
         
         # 선택 상태 표시 (우측)
         self.selection_label = QLabel("")
         self.statusbar.addPermanentWidget(self.selection_label)
+        
+        # 언어 선택 콤보박스
+        lang_label = QLabel("🌐")
+        lang_label.setStyleSheet("font-size: 16px; padding: 0 5px;")
+        self.statusbar.addPermanentWidget(lang_label)
+        
+        self.lang_combo = QComboBox()
+        self.lang_combo.setFixedWidth(100)
+        self.lang_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #404040;
+                border: 1px solid #606060;
+                border-radius: 4px;
+                padding: 4px 8px;
+            }
+            QComboBox:hover {
+                border: 1px solid #4CAF50;
+            }
+        """)
+        for code, name in get_available_languages().items():
+            self.lang_combo.addItem(name, code)
+        # 현재 언어 설정
+        current_idx = self.lang_combo.findData(get_language())
+        if current_idx >= 0:
+            self.lang_combo.setCurrentIndex(current_idx)
+        self.lang_combo.currentIndexChanged.connect(self._on_language_changed)
+        self.statusbar.addPermanentWidget(self.lang_combo)
         
     def _connect_signals(self):
         """시그널 연결"""
@@ -610,10 +639,10 @@ class MainWindow(QMainWindow):
             self.btn_vid_convert.setEnabled(selected > 0)
             
         if total > 0:
-            self.status_label.setText(f"총 {total}개 파일")
-            self.selection_label.setText(f"선택: {selected}개")
+            self.status_label.setText(t('total_files', count=total))
+            self.selection_label.setText(t('selected_count', count=selected))
         else:
-            self.status_label.setText("준비")
+            self.status_label.setText(t('ready'))
             self.selection_label.setText("")
             
     def _set_ui_enabled(self, enabled: bool):
@@ -635,6 +664,58 @@ class MainWindow(QMainWindow):
         self.btn_vid_convert.setEnabled(enabled and self.video_grid.selected_count > 0)
         
         self.setAcceptDrops(enabled)
+    
+    def _on_language_changed(self, index: int):
+        """언어 변경 시"""
+        lang_code = self.lang_combo.currentData()
+        if lang_code:
+            set_language(lang_code)
+            self._retranslate_ui()
+            
+    def _retranslate_ui(self):
+        """UI 텍스트 재번역"""
+        # 윈도우 타이틀
+        self.setWindowTitle(t('app_title'))
+        
+        # 탭 제목
+        self.tab_widget.setTabText(0, t('tab_image'))
+        self.tab_widget.setTabText(1, t('tab_video'))
+        
+        # 이미지 탭 버튼
+        self.btn_img_open_folder.setText(t('btn_open_folder'))
+        self.btn_img_add_files.setText(t('btn_add_files'))
+        self.btn_img_select_all.setText(t('btn_select_all'))
+        self.btn_img_deselect_all.setText(t('btn_deselect_all'))
+        self.btn_img_output_folder.setText(t('btn_output_folder'))
+        self.btn_img_settings.setText(t('btn_settings'))
+        self.btn_img_convert.setText(t('btn_convert'))
+        
+        # 동영상 탭 버튼
+        self.btn_vid_open_folder.setText(t('btn_open_folder'))
+        self.btn_vid_add_files.setText(t('btn_add_files'))
+        self.btn_vid_select_all.setText(t('btn_select_all'))
+        self.btn_vid_deselect_all.setText(t('btn_deselect_all'))
+        self.btn_vid_output_folder.setText(t('btn_output_folder'))
+        self.btn_vid_settings.setText(t('btn_settings'))
+        self.btn_vid_convert.setText(t('btn_convert'))
+        
+        # 힌트 라벨 (파일 없을 때만)
+        if self.image_grid.total_count == 0:
+            self.img_hint_label.setText(t('hint_drag_image'))
+        if self.video_grid.total_count == 0:
+            self.vid_hint_label.setText(t('hint_drag_video'))
+            
+        # 출력 폴더 라벨
+        if not self.output_folder:
+            self.lbl_img_output_folder.setText(t('output_original'))
+            self.lbl_vid_output_folder.setText(t('output_original'))
+        
+        # 그리드 플레이스홀더 번역
+        self.image_grid.retranslate()
+        self.video_grid.retranslate()
+        
+        # 상태바
+        self._update_status()
         
     def closeEvent(self, event: QCloseEvent):
         """종료 이벤트"""
