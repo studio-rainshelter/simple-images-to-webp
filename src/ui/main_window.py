@@ -84,19 +84,7 @@ class MainWindow(QMainWindow):
         # 탭 위젯
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabPosition(QTabWidget.TabPosition.North)
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #cccccc;
-            }
-            QTabBar::tab {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            QTabBar::tab:selected {
-                background-color: #ffffff;
-                font-weight: bold;
-            }
-        """)
+        # 스타일은 main.py의 전역 스타일시트에서 처리
         # 시그널 연결은 _connect_signals에서 처리
         
         # 이미지 탭
@@ -179,8 +167,8 @@ class MainWindow(QMainWindow):
                 background-color: #45a049;
             }
             QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
+                background-color: #404040;
+                color: #606060;
             }
         """)
         toolbar.addWidget(self.btn_img_convert)
@@ -195,7 +183,7 @@ class MainWindow(QMainWindow):
         info_layout.setContentsMargins(10, 5, 10, 5)
         
         self.img_hint_label = QLabel("💡 폴더를 선택하거나 이미지를 여기에 드래그하세요")
-        self.img_hint_label.setStyleSheet("color: #666666;")
+        self.img_hint_label.setStyleSheet("color: #a0a0a0;")
         info_layout.addWidget(self.img_hint_label)
         
         layout.addWidget(info_frame)
@@ -275,8 +263,8 @@ class MainWindow(QMainWindow):
                 background-color: #7B1FA2;
             }
             QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
+                background-color: #404040;
+                color: #606060;
             }
         """)
         toolbar.addWidget(self.btn_vid_convert)
@@ -291,7 +279,7 @@ class MainWindow(QMainWindow):
         info_layout.setContentsMargins(10, 5, 10, 5)
         
         self.vid_hint_label = QLabel("💡 폴더를 선택하거나 동영상을 여기에 드래그하세요")
-        self.vid_hint_label.setStyleSheet("color: #666666;")
+        self.vid_hint_label.setStyleSheet("color: #a0a0a0;")
         info_layout.addWidget(self.vid_hint_label)
         
         layout.addWidget(info_frame)

@@ -101,24 +101,24 @@ class ThumbnailItem(QFrame):
         if self._is_selected:
             self.setStyleSheet("""
                 ThumbnailItem {
-                    background-color: #e3f2fd;
-                    border: 2px solid #2196F3;
+                    background-color: #1e3a5f;
+                    border: 2px solid #4fc3f7;
                     border-radius: 8px;
                 }
                 ThumbnailItem:hover {
-                    background-color: #bbdefb;
+                    background-color: #254a73;
                 }
             """)
         else:
             self.setStyleSheet("""
                 ThumbnailItem {
-                    background-color: #ffffff;
-                    border: 1px solid #e0e0e0;
+                    background-color: #363636;
+                    border: 1px solid #505050;
                     border-radius: 8px;
                 }
                 ThumbnailItem:hover {
-                    background-color: #f5f5f5;
-                    border: 1px solid #bdbdbd;
+                    background-color: #404040;
+                    border: 1px solid #606060;
                 }
             """)
             

@@ -125,24 +125,24 @@ class VideoThumbnailItem(QFrame):
         if self._is_selected:
             self.setStyleSheet("""
                 VideoThumbnailItem {
-                    background-color: #e3f2fd;
-                    border: 2px solid #2196F3;
+                    background-color: #3d1f47;
+                    border: 2px solid #ce93d8;
                     border-radius: 8px;
                 }
                 VideoThumbnailItem:hover {
-                    background-color: #bbdefb;
+                    background-color: #4a2856;
                 }
             """)
         else:
             self.setStyleSheet("""
                 VideoThumbnailItem {
-                    background-color: #ffffff;
-                    border: 1px solid #e0e0e0;
+                    background-color: #363636;
+                    border: 1px solid #505050;
                     border-radius: 8px;
                 }
                 VideoThumbnailItem:hover {
-                    background-color: #f5f5f5;
-                    border: 1px solid #bdbdbd;
+                    background-color: #404040;
+                    border: 1px solid #606060;
                 }
             """)
             

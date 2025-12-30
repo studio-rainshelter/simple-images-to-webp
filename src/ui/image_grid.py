@@ -53,7 +53,7 @@ class ImageGrid(QScrollArea):
         
         # 컨테이너 위젯
         self._container = QWidget()
-        self._container.setStyleSheet("background-color: #fafafa;")
+        self._container.setStyleSheet("background-color: #2b2b2b;")
         self.setWidget(self._container)
         
         # 그리드 레이아웃
@@ -63,9 +63,9 @@ class ImageGrid(QScrollArea):
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         
         # Placeholder
-        self._placeholder = QLabel("📷 이미지가 없습니다\n\n폴더를 선택하거나 이미지를 드래그하세요")
+        self._placeholder = QLabel("📁 이미지가 없습니다\n\n폴더를 선택하거나 이미지를 드래그하세요")
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._placeholder.setStyleSheet("font-size: 18px; color: #999999;")
+        self._placeholder.setStyleSheet("font-size: 18px; color: #808080;")
         self._layout.addWidget(self._placeholder, 0, 0)
         
     def load_images(self, images: List[ImageFile]):
