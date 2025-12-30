@@ -14,6 +14,7 @@ a = Analysis(
     hiddenimports=[
         'PIL._tkinter_finder',
         'PyQt6.sip',
+        'imageio_ffmpeg',
     ],
     hookspath=[],
     hooksconfig={},
