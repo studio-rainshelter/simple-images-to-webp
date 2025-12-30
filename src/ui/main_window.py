@@ -467,16 +467,16 @@ class MainWindow(QMainWindow):
     def _on_img_convert(self):
         selected_paths = self.image_grid.selected_paths
         if not selected_paths:
-            QMessageBox.warning(self, "경고", "선택된 이미지가 없습니다.")
+            QMessageBox.warning(self, t('warning'), t('no_images_selected'))
             return
             
         quality = self.image_options.get('quality', 80)
-        msg = f"{len(selected_paths)}개 이미지를 품질 {quality}으로 WebP 변환하시겠습니까?"
+        msg = t('confirm_image_msg', count=len(selected_paths), quality=quality)
         if self.image_options.get('resize_enable'):
-            msg += "\n(리사이징 적용됨)"
+            msg += t('msg_resize_applied')
             
         reply = QMessageBox.question(
-            self, "변환 확인", msg,
+            self, t('confirm_convert'), msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
@@ -502,7 +502,7 @@ class MainWindow(QMainWindow):
         
         if results:
             QMessageBox.information(
-                self, "변환 완료", f"성공: {success}건, 실패: {failed}건"
+                self, t('convert_complete'), t('result_summary', success=success, failed=failed)
             )
             
     # === 동영상 탭 핸들러 ===
@@ -574,16 +574,20 @@ class MainWindow(QMainWindow):
     def _on_vid_convert(self):
         selected_paths = self.video_grid.selected_paths
         if not selected_paths:
-            QMessageBox.warning(self, "경고", "선택된 동영상이 없습니다.")
+            QMessageBox.warning(self, t('warning'), t('no_videos_selected'))
             return
             
         fps = self.video_options.get('fps', 15)
+        duration_enable = self.video_options.get('duration_enable', False)
         max_dur = self.video_options.get('max_duration', 10)
-        msg = (f"{len(selected_paths)}개 동영상을 Animated WebP로 변환하시겠습니까?\n"
-               f"(FPS: {fps}, 최대 {max_dur}초)")
+        
+        msg = t('confirm_video_msg', count=len(selected_paths), fps=fps, duration=max_dur)
+        if not duration_enable:
+             # duration_enable이 꺼져있으면 시간 제한 메시지 부분 제거
+             msg = t('confirm_video_msg_simple', count=len(selected_paths), fps=fps)
             
         reply = QMessageBox.question(
-            self, "변환 확인", msg,
+            self, t('confirm_convert'), msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
@@ -609,7 +613,7 @@ class MainWindow(QMainWindow):
         
         if results:
             QMessageBox.information(
-                self, "변환 완료", f"성공: {success}건, 실패: {failed}건"
+                self, t('convert_complete'), t('result_summary', success=success, failed=failed)
             )
             
     # === 공통 ===

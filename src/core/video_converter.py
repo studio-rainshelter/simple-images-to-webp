@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Optional, Callable
 
 from src.core.ffmpeg_wrapper import get_ffmpeg_path, get_video_info
+from src.core.pillow_webp_encoder import convert_video_to_webp_pillow
 
 
 @dataclass
@@ -91,6 +92,7 @@ def convert_video_to_webp_with_progress(
         fps = options.get('fps', 15)
         quality = options.get('quality', 75)
         loop = options.get('loop', 0)
+        compression_level = options.get('compression_level', 4)
         
         resize_enable = options.get('resize_enable', False)
         max_width = options.get('max_width', 480)
@@ -128,7 +130,7 @@ def convert_video_to_webp_with_progress(
             '-vf', vf_option,
             '-vcodec', 'libwebp',
             '-lossless', '0',
-            '-compression_level', '4',
+            '-compression_level', str(compression_level),
             '-q:v', str(quality),
             '-loop', str(loop),
             '-an',
@@ -268,10 +270,28 @@ class VideoConversionManager:
             filename = os.path.basename(src_path)
             dst_path = _get_unique_filename(dst_folder, filename, reserved_names)
             
-            # 변환 실행 (실시간 진행률 지원)
-            success, error = convert_video_to_webp_with_progress(
-                src_path, dst_path, options, duration, realtime_callback
-            )
+            # 변환 방식 선택: Pillow 하이브리드 (기본) 또는 FFmpeg 직접
+            use_pillow = options.get('use_pillow', True)  # 기본값: Pillow 사용
+            
+            if use_pillow:
+                # Pillow 하이브리드 방식 (더 나은 압축률)
+                result = convert_video_to_webp_pillow(
+                    input_path=src_path,
+                    output_path=dst_path,
+                    options=options,
+                    progress_callback=realtime_callback
+                )
+                success = result.success
+                error = result.error
+                if success:
+                    converted_size = result.converted_size
+            else:
+                # FFmpeg 직접 변환 방식 (빠름)
+                success, error = convert_video_to_webp_with_progress(
+                    src_path, dst_path, options, duration, realtime_callback
+                )
+                if success:
+                    converted_size = os.path.getsize(dst_path)
             
             if success:
                 converted_size = os.path.getsize(dst_path)

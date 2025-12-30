@@ -10,6 +10,7 @@ REQ-P-01~03 구현
 from typing import List, Optional, Callable
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from src.core.i18n import t
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit, QMessageBox
@@ -105,7 +106,7 @@ class ProgressDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # 상태 레이블
-        self.status_label = QLabel("변환 준비 중...")
+        self.status_label = QLabel(t('starting'))
         self.status_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(self.status_label)
         
@@ -134,11 +135,11 @@ class ProgressDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        self.cancel_button = QPushButton("취소")
+        self.cancel_button = QPushButton(t('btn_cancel'))
         self.cancel_button.clicked.connect(self._on_cancel)
         button_layout.addWidget(self.cancel_button)
         
-        self.close_button = QPushButton("닫기")
+        self.close_button = QPushButton(t('btn_close'))
         self.close_button.clicked.connect(self.accept)
         self.close_button.setEnabled(False)
         button_layout.addWidget(self.close_button)
@@ -170,7 +171,7 @@ class ProgressDialog(QDialog):
             if result.original_size > 0:
                 saved_percent = (1 - result.converted_size / result.original_size) * 100
                 self.current_file_label.setText(
-                    f"✓ {result.dst_path} ({saved_percent:.1f}% 절감)"
+                    f"✓ {result.dst_path} (" + t('size_decreased', ratio=saved_percent) + ")"
                 )
             self._log(f"✓ {result.src_path} → {result.dst_path}")
         else:
@@ -186,28 +187,28 @@ class ProgressDialog(QDialog):
         failed = sum(1 for r in results if not r.success)
         
         if self._worker and self._worker.is_cancelled:
-            self.status_label.setText("변환이 취소되었습니다")
-            self._log(f"\n=== 취소됨: 성공 {success}건, 실패 {failed}건 ===")
+            self.status_label.setText(t('status_cancelled'))
+            self._log(f"\n=== " + t('status_cancelled') + f": " + t('result_summary', success=success, failed=failed) + " ===")
         else:
-            self.status_label.setText("변환 완료!")
-            self._log(f"\n=== 완료: 성공 {success}건, 실패 {failed}건 ===")
+            self.status_label.setText(t('status_complete_simple'))
+            self._log(f"\n=== " + t('status_complete', success=success, failed=failed) + " ===")
             
             # 용량 절감 통계
             if self._worker:
                 summary = self._worker.get_summary()
                 if summary['original_size'] > 0:
                     saved_mb = summary['saved_size'] / (1024 * 1024)
-                    self._log(f"총 절감 용량: {saved_mb:.2f} MB ({summary['saved_percent']:.1f}%)")
+                    self._log(t('total_saved', size=saved_mb, percent=summary['saved_percent']))
         
         self.cancel_button.setEnabled(False)
         self.close_button.setEnabled(True)
         
     def _on_error(self, error_msg: str):
         """에러 발생"""
-        self.status_label.setText("오류 발생!")
-        self._log(f"\n=== 오류: {error_msg} ===")
+        self.status_label.setText(t('status_error'))
+        self._log(f"\n=== {error_msg} ===")
         
-        QMessageBox.critical(self, "변환 오류", error_msg)
+        QMessageBox.critical(self, t('title_error'), error_msg)
         
         self.cancel_button.setEnabled(False)
         self.close_button.setEnabled(True)
@@ -231,8 +232,8 @@ class ProgressDialog(QDialog):
         if self._worker and self._worker.isRunning():
             reply = QMessageBox.question(
                 self,
-                "변환 취소",
-                "변환이 진행 중입니다. 취소하시겠습니까?",
+                t('confirm_cancel_title'),
+                t('confirm_cancel_msg'),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.Yes:

@@ -261,6 +261,7 @@ def convert_video_to_webp(
         fps = options.get('fps', 15)
         quality = options.get('quality', 75)
         loop = options.get('loop', 0)
+        compression_level = options.get('compression_level', 4)
         
         # 크기 제한 옵션
         resize_enable = options.get('resize_enable', False)
@@ -304,7 +305,7 @@ def convert_video_to_webp(
             '-vf', vf_option,
             '-vcodec', 'libwebp',
             '-lossless', '0',  # lossy
-            '-compression_level', '4',
+            '-compression_level', str(compression_level),
             '-q:v', str(quality),
             '-loop', str(loop),
             '-an',  # 오디오 제거

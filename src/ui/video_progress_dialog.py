@@ -9,6 +9,7 @@ import os
 from typing import List, Optional
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from src.core.i18n import t
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
     QLabel, QProgressBar, QPushButton, QTextEdit
@@ -105,12 +106,12 @@ class VideoProgressDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # 상태 라벨
-        self.status_label = QLabel("변환 준비 중...")
+        self.status_label = QLabel(t('starting'))
         self.status_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(self.status_label)
         
         # === 전체 진행률 ===
-        layout.addWidget(QLabel("전체 진행률:"))
+        layout.addWidget(QLabel(t('label_total_progress')))
         self.total_progress_bar = QProgressBar()
         self.total_progress_bar.setMinimum(0)
         self.total_progress_bar.setMaximum(len(self._file_paths) * 100)  # 파일 수 × 100%
@@ -120,7 +121,7 @@ class VideoProgressDialog(QDialog):
         layout.addWidget(self.total_progress_bar)
         
         # === 현재 파일 진행률 ===
-        self.current_file_label = QLabel("대기 중...")
+        self.current_file_label = QLabel(t('status_waiting'))
         self.current_file_label.setStyleSheet("color: #666666; margin-top: 10px;")
         layout.addWidget(self.current_file_label)
         
@@ -144,7 +145,7 @@ class VideoProgressDialog(QDialog):
         layout.addWidget(self.file_progress_bar)
         
         # 로그 영역
-        layout.addWidget(QLabel("변환 로그:"))
+        layout.addWidget(QLabel(t('convert_log')))
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setMaximumHeight(120)
@@ -155,11 +156,11 @@ class VideoProgressDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        self.btn_cancel = QPushButton("취소")
+        self.btn_cancel = QPushButton(t('btn_cancel'))
         self.btn_cancel.clicked.connect(self._on_cancel)
         btn_layout.addWidget(self.btn_cancel)
         
-        self.btn_close = QPushButton("닫기")
+        self.btn_close = QPushButton(t('btn_close'))
         self.btn_close.clicked.connect(self.accept)
         self.btn_close.setEnabled(False)
         btn_layout.addWidget(self.btn_close)
@@ -215,10 +216,10 @@ class VideoProgressDialog(QDialog):
             if result.original_size > 0:
                 if result.converted_size < result.original_size:
                     ratio = (1 - result.converted_size / result.original_size) * 100
-                    size_info = f"{ratio:.1f}% 감소"
+                    size_info = t('size_decreased', ratio=ratio)
                 else:
                     ratio = (result.converted_size / result.original_size - 1) * 100
-                    size_info = f"{ratio:.1f}% 증가"
+                    size_info = t('size_increased', ratio=ratio)
             else:
                 size_info = "N/A"
                 
@@ -242,7 +243,7 @@ class VideoProgressDialog(QDialog):
         success = sum(1 for r in self._results if r.success)
         failed = sum(1 for r in self._results if not r.success)
         
-        self.status_label.setText(f"✨ 완료! 성공: {success}건, 실패: {failed}건")
+        self.status_label.setText(t('status_complete', success=success, failed=failed))
         self.current_file_label.setText("")
         self.file_progress_bar.setValue(100)
         self.total_progress_bar.setValue(self.total_progress_bar.maximum())
