@@ -1,5 +1,5 @@
 """
-동영상 → WebP 변환 엔진
+동영상 → WebM (VP9) 변환 엔진
 - 순차 처리 (동영상 변환은 CPU/GPU 집약적)
 - 실시간 진행률 콜백 지원
 - 중복 파일명 자동 처리
@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import List, Optional, Callable
 
 from src.core.ffmpeg_wrapper import get_ffmpeg_path, get_video_info
-from src.core.pillow_webp_encoder import convert_video_to_webp_pillow
 
 
 @dataclass
@@ -34,7 +33,7 @@ def _get_unique_filename(folder: str, original_filename: str, reserved: set) -> 
     중복 파일명 처리
     """
     base_name = Path(original_filename).stem
-    output_name = f"{base_name}.webp"
+    output_name = f"{base_name}.webm"
     output_path = os.path.join(folder, output_name)
     
     if not os.path.exists(output_path) and output_path not in reserved:
@@ -43,7 +42,7 @@ def _get_unique_filename(folder: str, original_filename: str, reserved: set) -> 
         
     counter = 1
     while True:
-        output_name = f"{base_name}({counter}).webp"
+        output_name = f"{base_name}({counter}).webm"
         output_path = os.path.join(folder, output_name)
         if not os.path.exists(output_path) and output_path not in reserved:
             reserved.add(output_path)
@@ -65,7 +64,7 @@ def _parse_ffmpeg_progress(line: str, total_duration: float) -> Optional[float]:
     return None
 
 
-def convert_video_to_webp_with_progress(
+def convert_video_to_webm_with_progress(
     input_path: str,
     output_path: str,
     options: dict,
@@ -73,40 +72,38 @@ def convert_video_to_webp_with_progress(
     progress_callback: Optional[Callable[[float, str], None]] = None
 ) -> tuple:
     """
-    동영상을 Animated WebP로 변환 (실시간 진행률 지원)
-    
+    동영상을 WebM (VP9)으로 변환 (실시간 진행률 지원)
+
     Args:
         input_path: 입력 동영상 경로
-        output_path: 출력 WebP 경로
+        output_path: 출력 WebM 경로
         options: 변환 옵션
         total_duration: 전체 동영상 길이 (초)
         progress_callback: 실시간 진행률 콜백 (progress: 0.0~1.0, status: str)
-        
+
     Returns:
         (성공 여부, 에러 메시지 또는 None)
     """
     try:
         ffmpeg = get_ffmpeg_path()
-        
+
         # 옵션 추출
         fps = options.get('fps', 15)
-        quality = options.get('quality', 75)
-        loop = options.get('loop', 0)
-        compression_level = options.get('compression_level', 4)
-        
+        crf = options.get('crf', 30)
+
         resize_enable = options.get('resize_enable', False)
         max_width = options.get('max_width', 480)
         max_height = options.get('max_height', 480)
-        
+
         duration_enable = options.get('duration_enable', False)
         max_duration = options.get('max_duration', 10)
-        
+
         # 실제 변환 길이
         if duration_enable:
             effective_duration = min(total_duration, max_duration)
         else:
             effective_duration = total_duration
-        
+
         # 비디오 필터 구성
         filters = []
         if resize_enable:
@@ -114,7 +111,7 @@ def convert_video_to_webp_with_progress(
             filters.append(scale_filter)
         filters.append(f"fps={fps}")
         vf_option = ",".join(filters)
-        
+
         # FFmpeg 명령어 구성
         cmd = [
             ffmpeg,
@@ -122,17 +119,15 @@ def convert_video_to_webp_with_progress(
             '-i', input_path,
             '-progress', 'pipe:1',  # 진행 상황을 stdout으로 출력
         ]
-        
+
         if duration_enable and total_duration > max_duration:
             cmd.extend(['-t', str(max_duration)])
-        
+
         cmd.extend([
             '-vf', vf_option,
-            '-vcodec', 'libwebp',
-            '-lossless', '0',
-            '-compression_level', str(compression_level),
-            '-q:v', str(quality),
-            '-loop', str(loop),
+            '-c:v', 'libvpx-vp9',
+            '-crf', str(crf),
+            '-b:v', '0',
             '-an',
             output_path
         ])
@@ -143,6 +138,8 @@ def convert_video_to_webp_with_progress(
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         )
         
@@ -270,28 +267,10 @@ class VideoConversionManager:
             filename = os.path.basename(src_path)
             dst_path = _get_unique_filename(dst_folder, filename, reserved_names)
             
-            # 변환 방식 선택: Pillow 하이브리드 (기본) 또는 FFmpeg 직접
-            use_pillow = options.get('use_pillow', True)  # 기본값: Pillow 사용
-            
-            if use_pillow:
-                # Pillow 하이브리드 방식 (더 나은 압축률)
-                result = convert_video_to_webp_pillow(
-                    input_path=src_path,
-                    output_path=dst_path,
-                    options=options,
-                    progress_callback=realtime_callback
-                )
-                success = result.success
-                error = result.error
-                if success:
-                    converted_size = result.converted_size
-            else:
-                # FFmpeg 직접 변환 방식 (빠름)
-                success, error = convert_video_to_webp_with_progress(
-                    src_path, dst_path, options, duration, realtime_callback
-                )
-                if success:
-                    converted_size = os.path.getsize(dst_path)
+            # FFmpeg VP9/WebM 직접 변환
+            success, error = convert_video_to_webm_with_progress(
+                src_path, dst_path, options, duration, realtime_callback
+            )
             
             if success:
                 converted_size = os.path.getsize(dst_path)

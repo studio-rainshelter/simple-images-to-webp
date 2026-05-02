@@ -1,6 +1,6 @@
 """
 FFmpeg 래퍼 모듈
-동영상 → Animated WebP 변환을 위한 FFmpeg 통합
+동영상 → WebM (VP9) 변환을 위한 FFmpeg 통합
 
 imageio-ffmpeg를 사용하여 FFmpeg 자동 관리
 - pip install imageio-ffmpeg로 FFmpeg 자동 다운로드
@@ -124,9 +124,11 @@ def get_video_info(video_path: str) -> Optional[VideoInfo]:
             cmd,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         )
-        
+
         if 'ffprobe' in ffprobe:
             if result.returncode != 0:
                 return None
@@ -230,103 +232,100 @@ def extract_frame(video_path: str, output_path: str, time_sec: float = 0.0) -> b
         return False
 
 
-def convert_video_to_webp(
+def convert_video_to_webm(
     input_path: str,
     output_path: str,
     options: dict
 ) -> Tuple[bool, Optional[str]]:
     """
-    동영상을 Animated WebP로 변환
-    
+    동영상을 WebM (VP9)으로 변환
+
     Args:
         input_path: 입력 동영상 경로
-        output_path: 출력 WebP 경로
+        output_path: 출력 WebM 경로
         options: 변환 옵션
             - fps: 출력 프레임 레이트 (기본: 15)
-            - quality: WebP 품질 0-100 (기본: 75)
+            - crf: CRF 값 0-63, 낮을수록 고품질 (기본: 30)
             - resize_enable: 크기 제한 적용 여부 (기본: False)
             - max_width: 최대 너비 (기본: 480)
-            - max_height: 최대 높이 (기본: 480)  
-            - loop: 루프 횟수, 0=무한 (기본: 0)
+            - max_height: 최대 높이 (기본: 480)
             - duration_enable: 길이 제한 적용 여부 (기본: False)
             - max_duration: 최대 길이 초 (기본: 10)
-            
+
     Returns:
         (성공 여부, 에러 메시지 또는 None)
     """
     try:
         ffmpeg = get_ffmpeg_path()
-        
+
         # 옵션 추출
         fps = options.get('fps', 15)
-        quality = options.get('quality', 75)
-        loop = options.get('loop', 0)
-        compression_level = options.get('compression_level', 4)
-        
+        crf = options.get('crf', 30)
+
         # 크기 제한 옵션
         resize_enable = options.get('resize_enable', False)
         max_width = options.get('max_width', 480)
         max_height = options.get('max_height', 480)
-        
+
         # 길이 제한 옵션
         duration_enable = options.get('duration_enable', False)
         max_duration = options.get('max_duration', 10)
-        
+
         # 동영상 정보 조회
         info = get_video_info(input_path)
         if not info:
             return False, "동영상 정보를 읽을 수 없습니다."
-        
+
         # 비디오 필터 구성
         filters = []
-        
+
         # 크기 제한 적용
         if resize_enable:
             scale_filter = f"scale='min({max_width},iw)':'min({max_height},ih)':force_original_aspect_ratio=decrease"
             filters.append(scale_filter)
-        
+
         # FPS 적용
         filters.append(f"fps={fps}")
-        
+
         vf_option = ",".join(filters)
-        
+
         # FFmpeg 명령어 구성
         cmd = [
             ffmpeg,
             '-y',  # 덮어쓰기
             '-i', input_path,
         ]
-        
+
         # 길이 제한 적용
         if duration_enable and info.duration > max_duration:
             cmd.extend(['-t', str(max_duration)])
-        
+
         cmd.extend([
             '-vf', vf_option,
-            '-vcodec', 'libwebp',
-            '-lossless', '0',  # lossy
-            '-compression_level', str(compression_level),
-            '-q:v', str(quality),
-            '-loop', str(loop),
+            '-c:v', 'libvpx-vp9',
+            '-crf', str(crf),
+            '-b:v', '0',
             '-an',  # 오디오 제거
             output_path
         ])
-        
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         )
-        
+
         if result.returncode != 0:
             return False, result.stderr[:500] if result.stderr else "변환 실패"
-            
+
         if not os.path.exists(output_path):
             return False, "출력 파일이 생성되지 않았습니다."
-            
+
         return True, None
-        
+
     except FileNotFoundError as e:
         return False, str(e)
     except Exception as e:

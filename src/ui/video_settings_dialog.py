@@ -1,6 +1,6 @@
 """
 동영상 변환 설정 다이얼로그
-FPS, 품질, 해상도, 루프, 최대 길이 설정
+FPS, CRF, 해상도, 최대 길이 설정
 (크기/길이 제한 선택적 적용 가능)
 다국어 지원
 """
@@ -19,7 +19,7 @@ from src.core.i18n import t
 
 class VideoSettingsDialog(QDialog):
     """
-    동영상 → WebP 변환 설정 다이얼로그
+    동영상 → WebM 변환 설정 다이얼로그
     """
     
     def __init__(self, current_options: dict, parent=None):
@@ -73,44 +73,23 @@ class VideoSettingsDialog(QDialog):
         fps_layout.addWidget(self.fps_spinbox)
         webp_layout.addRow(t('label_fps'), fps_layout)
         
-        # 2. 품질 (Quality)
-        quality_layout = QHBoxLayout()
-        self.quality_slider = QSlider(Qt.Orientation.Horizontal)
-        self.quality_slider.setRange(0, 100)
-        self.quality_spinbox = QSpinBox()
-        self.quality_spinbox.setRange(0, 100)
-        
-        
-        self.quality_slider.valueChanged.connect(self.quality_spinbox.setValue)
-        self.quality_spinbox.valueChanged.connect(self.quality_slider.setValue)
-        self.quality_slider.valueChanged.connect(lambda: self._check_custom_preset())
-        
-        quality_layout.addWidget(self.quality_slider)
-        quality_layout.addWidget(self.quality_spinbox)
-        webp_layout.addRow(t('label_quality'), quality_layout)
-        
-        # 2.5 압축 레벨 (Compression Level)
-        comp_layout = QHBoxLayout()
-        self.comp_slider = QSlider(Qt.Orientation.Horizontal)
-        self.comp_slider.setRange(0, 6)
-        self.comp_spinbox = QSpinBox()
-        self.comp_spinbox.setRange(0, 6)
-        
-        self.comp_slider.valueChanged.connect(self.comp_spinbox.setValue)
-        self.comp_spinbox.valueChanged.connect(self.comp_slider.setValue)
-        self.comp_slider.valueChanged.connect(lambda: self._check_custom_preset())
-        
-        comp_layout.addWidget(self.comp_slider)
-        comp_layout.addWidget(self.comp_spinbox)
-        webp_layout.addRow(t('label_compression'), comp_layout)
-        
-        # 3. 루프 횟수
-        self.combo_loop = QComboBox()
-        self.combo_loop.addItem(t('loop_infinite'), 0)
-        self.combo_loop.addItem(t('loop_once'), 1)
-        self.combo_loop.addItem(t('loop_twice'), 2)
-        self.combo_loop.addItem(t('loop_triple'), 3)
-        webp_layout.addRow(t('label_loop'), self.combo_loop)
+        # 2. CRF (품질) — 낮을수록 고품질
+        crf_layout = QHBoxLayout()
+        self.crf_slider = QSlider(Qt.Orientation.Horizontal)
+        self.crf_slider.setRange(0, 63)
+        self.crf_spinbox = QSpinBox()
+        self.crf_spinbox.setRange(0, 63)
+
+        self.crf_slider.valueChanged.connect(self.crf_spinbox.setValue)
+        self.crf_spinbox.valueChanged.connect(self.crf_slider.setValue)
+        self.crf_slider.valueChanged.connect(lambda: self._check_custom_preset())
+
+        crf_layout.addWidget(self.crf_slider)
+        crf_layout.addWidget(self.crf_spinbox)
+        crf_hint = QLabel(t('label_crf_hint'))
+        crf_hint.setStyleSheet("color: #a0a0a0; font-size: 11px;")
+        crf_layout.addWidget(crf_hint)
+        webp_layout.addRow(t('label_crf'), crf_layout)
         
         webp_group.setLayout(webp_layout)
         layout.addWidget(webp_group)
@@ -193,17 +172,9 @@ class VideoSettingsDialog(QDialog):
     def _load_options(self):
         """초기 옵션 로드"""
         self.fps_slider.setValue(self.options.get('fps', 15))
-        self.quality_slider.setValue(self.options.get('quality', 75))
-        self.comp_slider.setValue(self.options.get('compression_level', 4))
-        
-        # 저장된 프리셋 복원 시도 (완벽 일치 검사는 복잡하므로 기본값은 'Custom')
-        # 또는 로직을 통해 값이 프리셋과 일치하면 프리셋 선택
+        self.crf_slider.setValue(self.options.get('crf', 30))
+
         self.combo_preset.setCurrentIndex(0)  # Custom
-        
-        loop = self.options.get('loop', 0)
-        idx = self.combo_loop.findData(loop)
-        if idx >= 0:
-            self.combo_loop.setCurrentIndex(idx)
         
         # 크기 제한
         resize_enable = self.options.get('resize_enable', False)
@@ -222,9 +193,7 @@ class VideoSettingsDialog(QDialog):
         """설정된 옵션 반환"""
         return {
             'fps': self.fps_slider.value(),
-            'quality': self.quality_slider.value(),
-            'compression_level': self.comp_slider.value(),
-            'loop': self.combo_loop.currentData(),
+            'crf': self.crf_slider.value(),
             'resize_enable': self.chk_resize_enable.isChecked(),
             'max_width': self.spin_max_width.value(),
             'max_height': self.spin_max_height.value(),
@@ -235,37 +204,31 @@ class VideoSettingsDialog(QDialog):
     def _on_preset_changed(self, index: int):
         """프리셋 변경 핸들러"""
         preset_data = self.combo_preset.currentData()
-        
+
         # 신호 차단 (무한 루프 방지)
         self.fps_slider.blockSignals(True)
-        self.quality_slider.blockSignals(True)
-        self.comp_slider.blockSignals(True)
-        
+        self.crf_slider.blockSignals(True)
+
         if preset_data == 'high':
-            # 고품질: 24fps, Q90, Comp 4
+            # 고품질: 24fps, CRF 20
             self.fps_slider.setValue(24)
-            self.quality_slider.setValue(90)
-            self.comp_slider.setValue(4)
+            self.crf_slider.setValue(20)
         elif preset_data == 'balanced':
-            # 균형: 15fps, Q75, Comp 4
+            # 균형: 15fps, CRF 30
             self.fps_slider.setValue(15)
-            self.quality_slider.setValue(75)
-            self.comp_slider.setValue(4)
+            self.crf_slider.setValue(30)
         elif preset_data == 'size':
-            # 최소 용량: 10fps, Q50, Comp 6
+            # 최소 용량: 10fps, CRF 45
             self.fps_slider.setValue(10)
-            self.quality_slider.setValue(50)
-            self.comp_slider.setValue(6)
-            
+            self.crf_slider.setValue(45)
+
         # 신호 복구
         self.fps_slider.blockSignals(False)
-        self.quality_slider.blockSignals(False)
-        self.comp_slider.blockSignals(False)
-        
+        self.crf_slider.blockSignals(False)
+
         # SpinBox 업데이트 (Slider 연결됨)
         self.fps_spinbox.setValue(self.fps_slider.value())
-        self.quality_spinbox.setValue(self.quality_slider.value())
-        self.comp_spinbox.setValue(self.comp_slider.value())
+        self.crf_spinbox.setValue(self.crf_slider.value())
 
     def _check_custom_preset(self):
         """값이 변경되면 프리셋을 Custom으로 변경"""

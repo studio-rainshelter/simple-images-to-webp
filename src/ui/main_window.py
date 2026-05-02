@@ -52,11 +52,10 @@ class MainWindow(QMainWindow):
             'keep_ratio': True
         }
         
-        # 동영상 변환 옵션 (용량 감소 최적화)
+        # 동영상 변환 옵션 (WebM/VP9)
         self.video_options = {
             'fps': 10,  # 낮은 FPS로 용량 절감
-            'quality': 50,  # 적당한 압축
-            'loop': 0,
+            'crf': 30,  # CRF 0-63, 낮을수록 고품질
             'resize_enable': False,  # 기본: 원본 크기 유지
             'max_width': 480,
             'max_height': 480,
@@ -262,7 +261,7 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         
         # 변환 시작 버튼
-        self.btn_vid_convert = QPushButton("🚀 WebP 변환")
+        self.btn_vid_convert = QPushButton("🚀 WebM 변환")
         self.btn_vid_convert.setMinimumWidth(120)
         self.btn_vid_convert.setEnabled(False)
         self.btn_vid_convert.setStyleSheet("""
@@ -745,7 +744,7 @@ class MainWindow(QMainWindow):
         self.btn_img_remove.setText(t('btn_remove'))
         self.btn_img_output_folder.setText(t('btn_output_folder'))
         self.btn_img_settings.setText(t('btn_settings'))
-        self.btn_img_convert.setText(t('btn_convert'))
+        self.btn_img_convert.setText(t('btn_convert_image'))
         
         # 동영상 탭 버튼
         self.btn_vid_open_folder.setText(t('btn_open_folder'))
@@ -755,7 +754,7 @@ class MainWindow(QMainWindow):
         self.btn_vid_remove.setText(t('btn_remove'))
         self.btn_vid_output_folder.setText(t('btn_output_folder'))
         self.btn_vid_settings.setText(t('btn_settings'))
-        self.btn_vid_convert.setText(t('btn_convert'))
+        self.btn_vid_convert.setText(t('btn_convert_video'))
         
         # 힌트 라벨 (파일 없을 때만)
         if self.image_grid.total_count == 0:
